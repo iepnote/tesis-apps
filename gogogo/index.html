@@ -33,6 +33,11 @@ body.nobg #tv { background:#26224a; border:14px solid #fff; box-shadow:0 18px 40
 #video { width:100%; height:100%; object-fit:contain; background:#000; display:none; }
 #ytwrap { position:absolute; inset:0; display:none; background:#000; }
 #ytwrap iframe { width:100%; height:100%; }
+#adCover { position:absolute; inset:0; display:none; z-index:7; background:rgba(26,20,50,.95);
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 150px), calc(100% - 300px) calc(100% - 150px), calc(100% - 300px) 100%, 0 100%);
+  align-items:center; justify-content:center; flex-direction:column; gap:20px; color:#fff; text-align:center; }
+#adCover .m1 { font-size:46px; font-weight:900; }
+#adCover .m2 { font-size:25px; opacity:.88; line-height:1.6; }
 #ytshield { position:absolute; inset:0; clip-path:polygon(0 0, 100% 0, 100% calc(100% - 150px), calc(100% - 300px) calc(100% - 150px), calc(100% - 300px) 100%, 0 100%); }  /* 오터치 방지 + 우하단은 광고 건너뛰기 누를 수 있게 구멍 */
 #tvidle { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; color:#fff; text-align:center; background:linear-gradient(135deg,#3b3585,#7b5fb0); }
 #tvidle .logo { font-size:72px; font-weight:900; text-shadow:0 4px 0 rgba(0,0,0,.25); }
@@ -202,6 +207,7 @@ body.calm #overlay .big.clap { animation:none; }
     <div id="tvtitle"></div>
     <div id="progressWrap"><div id="progressBar"></div></div>
     <div id="overlay"></div>
+    <div id="adCover"><div class="m1">📺 광고가 나오고 있어요</div><div class="m2">조금만 기다려요!<br>「건너뛰기」 단추가 나오면 오른쪽 아래 ↘ 에서 눌러요</div></div>
   </div>
 
   <div id="nextBanner"></div>
@@ -388,7 +394,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('krk_'+k); return v ? JSON.parse(v) : d; } catch(e) { return d; } },
   set(k, v) { try { localStorage.setItem('krk_'+k, JSON.stringify(v)); } catch(e) {} persistAll(); }
 };
-const ONLINE = true; // 온라인판(GitHub Pages): 파일 저장 없음, 첫 방문에만 내장 데이터 로드
+const ONLINE = true; // 온라인판(GitHub Pages)
 /* 서버 실행(노래방 시작.bat) 중이면 폴더의 data/karaoke-data.json 에도 자동 저장 —
    버전 교체·PC 이동·zip 배포에도 곡/싱크/설정이 유지됨 */
 let saveTimer = null;
@@ -503,6 +509,7 @@ function ytPlay(videoId) {
 function curTime() { return usingYT ? (ytPlayer && ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() : 0) : video.currentTime; }
 function durTime() { return usingYT ? (ytPlayer && ytPlayer.getDuration ? ytPlayer.getDuration() : 0) : video.duration; }
 function stopMedia() {
+  setAdCover(false); ytFrozen = 0;
   video.pause(); video.removeAttribute('src'); video.load();
   if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
   document.getElementById('ytwrap').style.display = 'none';
@@ -570,11 +577,24 @@ video.addEventListener('timeupdate', () => {
   tickLyrics();
 });
 video.addEventListener('ended', () => praise());
+let ytLastT = 0, ytFrozen = 0, adShown = false;
+function setAdCover(on) {
+  if (on === adShown) return;
+  adShown = on;
+  document.getElementById('adCover').style.display = on ? 'flex' : 'none';
+  if (lyrData) document.getElementById('lyrics').style.display = on ? 'none' : 'flex';
+  if (ytPlayer && ytPlayer.setVolume) ytPlayer.setVolume(on ? 0 : Math.min(settings.vol, settings.cap)); // 광고 소리 줄임
+}
 setInterval(() => { // 유튜브는 timeupdate가 없어 폴링
   if (usingYT && playing) {
-    const d = durTime();
-    if (d) document.getElementById('progressBar').style.width = (curTime()/d*100) + '%';
+    const d = durTime(), t = curTime();
+    if (d) document.getElementById('progressBar').style.width = (t/d*100) + '%';
     tickLyrics();
+    // ponytail: 광고 감지 휴리스틱 — '재생 중(state 1)인데 영상 시간이 1.2초째 정지'면 광고로 판단
+    const st = ytPlayer && ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
+    if (st === 1 && Math.abs(t - ytLastT) < 0.05) ytFrozen++; else ytFrozen = 0;
+    ytLastT = t;
+    setAdCover(ytFrozen >= 4);
   }
 }, 300);
 
