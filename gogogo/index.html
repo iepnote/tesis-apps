@@ -87,7 +87,8 @@ body.nobg #machine { background:linear-gradient(#4a4460,#332e4a); box-shadow:0 1
 #teacherBtn.active { outline:5px solid #7e57c2; outline-offset:2px; background:rgba(126,87,194,.14); }
 /* 동영상 전체화면 모드(재생 시 화면 가득 — 브라우저 전체화면 ⛶ 과 다름) */
 body.vfull #tv { left:0; top:0; width:1920px; height:1080px; border-radius:0; z-index:15; }
-body.vfull #lyrics { left:0; width:1920px; top:930px; height:150px; z-index:16; padding:0 120px; }
+body.vfull #lyrics { left:0; width:1920px; top:895px; height:185px; z-index:16; padding:0 120px; }
+body.vfull #lyrNow { font-size:calc(var(--lyr,52px) * 1.7); }  /* 전체화면 = 화면 커진 만큼 가사도 비례 확대 */
 body.vfull #nextBanner { z-index:16; }
 #logo { position:absolute; left:168px; top:889px; height:60px; z-index:4; }
 #catCol { flex:.75; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
