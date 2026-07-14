@@ -482,6 +482,12 @@ function ytIdOf(f) {
   return m ? m[1] : null;
 }
 let ytPlayer = null, usingYT = false;
+function hideYtCaptions(pl) { // 유튜브 CC 자막 강제 끔 (영상에 박힌 자막은 못 끔)
+  if (!pl) return;
+  try { pl.unloadModule('captions'); } catch(e) {}
+  try { pl.unloadModule('cc'); } catch(e) {}
+  try { pl.setOption('captions', 'track', {}); } catch(e) {}
+}
 function ytLoad(cb) {
   if (window.YT && YT.Player) return cb();
   window.onYouTubeIframeAPIReady = cb;
@@ -495,6 +501,7 @@ function applyYtSettings() {
   if (!ytPlayer || !ytPlayer.setVolume) return;
   ytPlayer.setVolume(Math.min(settings.vol, settings.cap));
   ytPlayer.setPlaybackRate(settings.speed); // 유튜브는 0.75/1 등 지원 배속에 가장 가까운 값으로 적용됨
+  hideYtCaptions(ytPlayer);
   ytPlayer.playVideo();
 }
 function ytPlay(videoId) {
@@ -503,10 +510,10 @@ function ytPlay(videoId) {
     if (ytPlayer) { ytPlayer.loadVideoById(videoId); applyYtSettings(); return; }
     ytPlayer = new YT.Player('ytdiv', {
       width:'100%', height:'100%', videoId,
-      playerVars: {autoplay:1, controls:0, rel:0, iv_load_policy:3, disablekb:1, fs:0, playsinline:1},
+      playerVars: {autoplay:1, controls:0, rel:0, iv_load_policy:3, disablekb:1, fs:0, playsinline:1, cc_load_policy:0},
       events: {
         onReady: applyYtSettings,
-        onStateChange: e => { if (e.data === 0 && usingYT && playing) praise(); },
+        onStateChange: e => { if (e.data === 1) hideYtCaptions(ytPlayer); if (e.data === 0 && usingYT && playing) praise(); },
         onError: e => {
           if (!usingYT || !playing) return;
           const ov = document.getElementById('overlay');
@@ -1043,7 +1050,7 @@ function syncToStep2() {
     ytLoad(() => {
       if (syncYtPlayer) syncYtPlayer.loadVideoById(ytid);
       else syncYtPlayer = new YT.Player('syncYtDiv', { width:'100%', height:'100%', videoId:ytid,
-        playerVars:{autoplay:1, controls:1, rel:0, playsinline:1} }); // 싱크 도구에선 유튜브 기본 컨트롤 허용(구간 이동용)
+        playerVars:{autoplay:1, controls:1, rel:0, playsinline:1, cc_load_policy:0} }); // 싱크 도구에선 유튜브 기본 컨트롤 허용(구간 이동용)
     });
   } else {
     sv.src = isUrl(syncSong.f) ? syncSong.f : '영상/' + syncSong.f;
